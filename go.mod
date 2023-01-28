@@ -1,3 +1,3 @@
-module github.com/ghostzch/levelcache
+module github.com/tyz-coder/levelcache
 
 go 1.13
