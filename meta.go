@@ -19,7 +19,7 @@ type metaBucket struct {
 	itemPath string
 	auxPath  string
 	lock     sync.RWMutex
-	items    map[Hash]*item
+	items    map[UUID]*item
 	aux      Auxiliary
 }
 
@@ -42,7 +42,7 @@ func newMetaBucket(dir string, idx int, aux Auxiliary) *metaBucket {
 	b := &metaBucket{
 		itemPath: fmt.Sprintf("%s/%d-%d.item", dir, version, idx),
 		auxPath:  fmt.Sprintf("%s/%d-%d.aux", dir, version, idx),
-		items:    make(map[Hash]*item),
+		items:    make(map[UUID]*item),
 		aux:      aux}
 
 	aux.Load(b.auxPath)
@@ -57,7 +57,7 @@ func newMetaBucket(dir string, idx int, aux Auxiliary) *metaBucket {
 	return b
 }
 
-func (m *meta) get(k Hash) *item {
+func (m *meta) get(k UUID) *item {
 	b := m.getBucket(k)
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -68,7 +68,7 @@ func (m *meta) get(k Hash) *item {
 	return nil
 }
 
-func (m *meta) addItem(k Hash, item *item, auxData interface{}) {
+func (m *meta) addItem(k UUID, item *item, auxData interface{}) {
 	b := m.getBucket(k)
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -77,7 +77,7 @@ func (m *meta) addItem(k Hash, item *item, auxData interface{}) {
 	b.aux.Add(k, auxData)
 }
 
-func (m *meta) addSegment(k Hash, start, end int, write func(segIndex uint32)) {
+func (m *meta) addSegment(k UUID, start, end int, write func(segIndex uint32)) {
 	b := m.getBucket(k)
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -103,7 +103,7 @@ func (m *meta) addSegment(k Hash, start, end int, write func(segIndex uint32)) {
 	item.Segments = append(item.Segments, s)
 }
 
-func (m *meta) del(k Hash) {
+func (m *meta) del(k UUID) {
 	b := m.getBucket(k)
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -114,7 +114,7 @@ func (m *meta) del(k Hash) {
 
 func (m *meta) delBatch(parallel int, macher Matcher) {
 	m.foreachBucket(parallel, func(b *metaBucket) {
-		keys := func() []Hash {
+		keys := func() []UUID {
 			b.lock.RLock()
 			defer b.lock.RUnlock()
 			return macher(b.aux)
@@ -163,6 +163,6 @@ func (m *meta) foreachBucket(parallel int, handler func(b *metaBucket)) {
 	wg.Wait()
 }
 
-func (m *meta) getBucket(k Hash) *metaBucket {
+func (m *meta) getBucket(k UUID) *metaBucket {
 	return m.buckets[k[0]]
 }

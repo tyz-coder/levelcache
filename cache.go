@@ -1,15 +1,14 @@
 package levelcache
 
-import (
-	"crypto/md5"
-)
-
 const (
 	version     int = 1000
 	bucketLimit int = 256
 )
 
-type Hash [md5.Size]byte
+// Size of a UUID in bytes.
+const Size = 16
+
+type UUID [Size]byte
 
 type DevConf struct {
 	Name     string
@@ -30,16 +29,16 @@ type Cache struct {
 }
 
 type Auxiliary interface {
-	Add(key Hash, auxItem interface{})
-	Get(key Hash) interface{}
-	Del(key Hash)
+	Add(key UUID, auxItem interface{})
+	Get(key UUID) interface{}
+	Del(key UUID)
 	Load(path string)
 	Dump(path string)
 }
 
 type AuxFactory func(idx int) Auxiliary
 
-type Matcher func(aux Auxiliary) []Hash
+type Matcher func(aux Auxiliary) []UUID
 
 func NewCache(conf Config, devices []DevConf) *Cache {
 	cache := &Cache{
@@ -67,7 +66,7 @@ func (c *Cache) Dump() {
 	}
 }
 
-func (c *Cache) levelUp(currentLevel int, key Hash, segIndex uint32, data []byte) {
+func (c *Cache) levelUp(currentLevel int, key UUID, segIndex uint32, data []byte) {
 	if currentLevel >= len(c.devices)-1 {
 		return
 	}
@@ -77,7 +76,7 @@ func (c *Cache) levelUp(currentLevel int, key Hash, segIndex uint32, data []byte
 	d.add(key, segIndex, data)
 }
 
-func (c *Cache) Get(key Hash, start int, end int) (dataList [][]byte, hitDevs []string, missSegments [][2]int) {
+func (c *Cache) Get(key UUID, start int, end int) (dataList [][]byte, hitDevs []string, missSegments [][2]int) {
 	item := c.meta.get(key)
 	if item == nil {
 		return nil, nil, nil
@@ -118,7 +117,7 @@ func (c *Cache) Get(key Hash, start int, end int) (dataList [][]byte, hitDevs []
 	return dataList, hitDevs, missSegments
 }
 
-func (c *Cache) AddItem(key Hash, expire, size int64, auxData interface{}) {
+func (c *Cache) AddItem(key UUID, expire, size int64, auxData interface{}) {
 	const maxSegSize uint32 = 1024 * 1024 * 64
 	const minSegSize uint32 = 1024 * 1024
 	const defaultSegCount int64 = 1024
@@ -140,14 +139,14 @@ func (c *Cache) AddItem(key Hash, expire, size int64, auxData interface{}) {
 	c.meta.addItem(key, item, auxData)
 }
 
-func (c *Cache) AddSegment(key Hash, start int, data []byte) {
+func (c *Cache) AddSegment(key UUID, start int, data []byte) {
 	c.meta.addSegment(key, start, start+len(data), func(segIndex uint32) {
 		c.devices[0].add(key, segIndex, data)
 	})
 
 }
 
-func (c *Cache) Del(k Hash) {
+func (c *Cache) Del(k UUID) {
 	c.meta.del(k)
 	for _, d := range c.devices {
 		d.del(k)

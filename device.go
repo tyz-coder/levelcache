@@ -8,7 +8,7 @@ import (
 )
 
 type segKey struct {
-	Key   Hash
+	Key   UUID
 	Index uint32
 }
 
@@ -21,7 +21,7 @@ type segValue struct {
 type devBucket struct {
 	metaPath string
 	lock     sync.RWMutex
-	segments map[Hash]map[uint32]*segValue
+	segments map[UUID]map[uint32]*segValue
 	blockMap map[int64][]segKey
 }
 
@@ -44,7 +44,7 @@ func newDevBucket(dir string, idx int) *devBucket {
 
 	bkt := &devBucket{
 		metaPath: metaPath,
-		segments: make(map[Hash]map[uint32]*segValue),
+		segments: make(map[UUID]map[uint32]*segValue),
 		blockMap: make(map[int64][]segKey)}
 
 	if meta, err := os.Open(metaPath); err != nil {
@@ -101,7 +101,7 @@ func (d *device) foreachBucket(parallel int, handler func(b *devBucket)) {
 	wg.Wait()
 }
 
-func (d *device) get(key Hash, seg uint32) []byte {
+func (d *device) get(key UUID, seg uint32) []byte {
 	b := d.getBucket(key)
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -113,7 +113,7 @@ func (d *device) get(key Hash, seg uint32) []byte {
 	return nil
 }
 
-func (d *device) add(k Hash, seg uint32, data []byte) {
+func (d *device) add(k UUID, seg uint32, data []byte) {
 	b := d.getBucket(k)
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -130,7 +130,7 @@ func (d *device) add(k Hash, seg uint32, data []byte) {
 		Size:  int64(len(data))}
 }
 
-func (d *device) del(k Hash) {
+func (d *device) del(k UUID) {
 	b := d.getBucket(k)
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -155,6 +155,6 @@ func (d *device) delBlock(block int64) {
 	}
 }
 
-func (d *device) getBucket(k Hash) *devBucket {
+func (d *device) getBucket(k UUID) *devBucket {
 	return d.buckets[k[0]]
 }

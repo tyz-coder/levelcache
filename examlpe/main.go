@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"fmt"
-	cache "github.com/ghostzch/levelcache"
+	cache "github.com/tyz-coder/levelcache"
 	"hash/crc32"
 	"os"
 	"regexp"
@@ -20,19 +20,19 @@ type httpAuxData struct {
 }
 
 type httpAux struct {
-	datas map[cache.Hash]httpAuxData
+	datas map[cache.UUID]httpAuxData
 }
 
-func (aux *httpAux) Add(key cache.Hash, auxItem interface{}) {
+func (aux *httpAux) Add(key cache.UUID, auxItem interface{}) {
 	aux.datas[key] = auxItem.(httpAuxData)
 }
 
-func (aux *httpAux) Get(key cache.Hash) interface{} {
+func (aux *httpAux) Get(key cache.UUID) interface{} {
 	data, _ := aux.datas[key]
 	return data
 }
 
-func (aux *httpAux) Del(key cache.Hash) {
+func (aux *httpAux) Del(key cache.UUID) {
 	delete(aux.datas, key)
 }
 
@@ -45,7 +45,7 @@ func (aux *httpAux) Dump(path string) {
 }
 
 func NewHttpAux(idx int) cache.Auxiliary {
-	return &httpAux{datas: make(map[cache.Hash]httpAuxData)}
+	return &httpAux{datas: make(map[cache.UUID]httpAuxData)}
 }
 
 func main() {
@@ -106,8 +106,8 @@ func main() {
 	fmt.Println(c.Get(pngkey, 0, -1))
 
 	fmt.Println("Del jpg")
-	c.DelBatch(func(aux cache.Auxiliary) []cache.Hash {
-		keys := make([]cache.Hash, 0)
+	c.DelBatch(func(aux cache.Auxiliary) []cache.UUID {
+		keys := make([]cache.UUID, 0)
 		for k, v := range aux.(*httpAux).datas {
 			if v.fileType == crc32.ChecksumIEEE([]byte("jpg")) {
 				keys = append(keys, k)
@@ -120,8 +120,8 @@ func main() {
 
 	fmt.Println("Del regex")
 	r := regexp.MustCompile(`http://www.test.com/123/.*png`)
-	c.DelBatch(func(aux cache.Auxiliary) []cache.Hash {
-		keys := make([]cache.Hash, 0)
+	c.DelBatch(func(aux cache.Auxiliary) []cache.UUID {
+		keys := make([]cache.UUID, 0)
 		for k, v := range aux.(*httpAux).datas {
 			if r.Match(v.rawKey) {
 				fmt.Println("match", string(v.rawKey))
